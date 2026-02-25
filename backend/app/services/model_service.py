@@ -1,15 +1,59 @@
+import io
 import uuid
 import numpy as np
+import joblib
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_absolute_error, root_mean_squared_error
 from .data_service import data_service
-from ..config import DATASETS
+from ..config import DATASETS, SUPABASE_URL, SUPABASE_KEY, SUPABASE_BUCKET
 
 
 class ModelService:
     def __init__(self):
         self._models: dict[str, dict] = {}
+        self._storage = None
+        if SUPABASE_URL and SUPABASE_KEY:
+            try:
+                from supabase import create_client
+                client = create_client(SUPABASE_URL, SUPABASE_KEY)
+                self._storage = client.storage
+                self._load_all()
+            except Exception as e:
+                print(f"[ModelService] Supabase init failed: {e}")
+
+    def _persist(self, model_id: str) -> None:
+        if not self._storage:
+            return
+        try:
+            buf = io.BytesIO()
+            joblib.dump(self._models[model_id], buf)
+            buf.seek(0)
+            self._storage.from_(SUPABASE_BUCKET).upload(
+                f"{model_id}.pkl",
+                buf.getvalue(),
+                file_options={"content-type": "application/octet-stream", "upsert": "true"},
+            )
+        except Exception as e:
+            print(f"[ModelService] Persist {model_id} failed: {e}")
+
+    def _load_all(self) -> None:
+        if not self._storage:
+            return
+        try:
+            files = self._storage.from_(SUPABASE_BUCKET).list()
+            for f in files:
+                name = f["name"]
+                if not name.endswith(".pkl"):
+                    continue
+                model_id = name[:-4]
+                data = self._storage.from_(SUPABASE_BUCKET).download(name)
+                entry = joblib.load(io.BytesIO(data))
+                self._models[model_id] = entry
+            if self._models:
+                print(f"[ModelService] Loaded {len(self._models)} model(s) from Supabase")
+        except Exception as e:
+            print(f"[ModelService] Load from Supabase failed: {e}")
 
     def train(
         self,
@@ -83,6 +127,7 @@ class ModelService:
             entry["quantile_upper"] = gb_upper
 
         self._models[model_id] = entry
+        self._persist(model_id)
 
         return {
             "model_id": model_id,
