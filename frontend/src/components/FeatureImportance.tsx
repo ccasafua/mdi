@@ -18,7 +18,7 @@ export default function FeatureImportance({ data }: FeatureImportanceProps) {
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis type="number" />
           <YAxis type="category" dataKey="feature" width={110} />
-          <Tooltip formatter={(v: number) => v.toFixed(4)} />
+          <Tooltip formatter={(v) => (v as number).toFixed(4)} />
           <Bar dataKey="importance" fill="#1976d2" />
         </BarChart>
       </ResponsiveContainer>

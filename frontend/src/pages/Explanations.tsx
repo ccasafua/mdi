@@ -191,14 +191,14 @@ export default function Explanations() {
                           color: depData.points.map((p) => p.color_value),
                           colorscale: "Viridis" as const,
                           showscale: true,
-                          colorbar: { title: depData.color_feature },
+                          colorbar: { title: { text: depData.color_feature } },
                         },
                       },
                     ]}
                     layout={{
                       height: 400,
-                      xaxis: { title: depData.feature },
-                      yaxis: { title: `SHAP value for ${depData.feature}` },
+                      xaxis: { title: { text: depData.feature } },
+                      yaxis: { title: { text: `SHAP value for ${depData.feature}` } },
                       margin: { l: 60, r: 40, t: 20, b: 60 },
                     }}
                     config={{ responsive: true }}

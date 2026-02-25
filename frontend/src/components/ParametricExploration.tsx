@@ -3,7 +3,7 @@ import {
   Box, Typography, Button, TextField, Grid, Paper, Slider, CircularProgress,
 } from "@mui/material";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Area, ComposedChart, ReferenceArea,
 } from "recharts";
 import { parametricSweep } from "../api/client";

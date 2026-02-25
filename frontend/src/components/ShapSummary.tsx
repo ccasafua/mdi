@@ -41,7 +41,7 @@ export default function ShapSummary({ points, featureNames }: ShapSummaryProps) 
         color: featurePoints.map((p) => p.feature_value),
         colorscale: "RdBu" as const,
         showscale: idx === featureOrder.length - 1,
-        colorbar: idx === featureOrder.length - 1 ? { title: "Feature value" } : undefined,
+        colorbar: idx === featureOrder.length - 1 ? { title: { text: "Feature value" } } : undefined,
       },
       showlegend: false,
     };
@@ -57,7 +57,7 @@ export default function ShapSummary({ points, featureNames }: ShapSummaryProps) 
         layout={{
           height: 450,
           margin: { l: 140, r: 40, t: 20, b: 40 },
-          xaxis: { title: "SHAP value" },
+          xaxis: { title: { text: "SHAP value" } },
           yaxis: {
             tickvals: featureOrder.map((_, i) => i),
             ticktext: featureOrder,

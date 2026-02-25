@@ -123,13 +123,13 @@ export default function MultivariableExploration({ modelId }: Props) {
                 y: result.axes[result.variable_names[1]],
                 type: "heatmap" as const,
                 colorscale: "YlOrRd" as const,
-                colorbar: { title: "MPa" },
+                colorbar: { title: { text: "MPa" } },
               },
             ]}
             layout={{
               height: 500,
-              xaxis: { title: result.variable_names[0] },
-              yaxis: { title: result.variable_names[1] },
+              xaxis: { title: { text: result.variable_names[0] } },
+              yaxis: { title: { text: result.variable_names[1] } },
               margin: { l: 80, r: 40, t: 20, b: 60 },
             }}
             config={{ responsive: true }}

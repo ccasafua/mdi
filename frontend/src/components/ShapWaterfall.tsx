@@ -1,4 +1,5 @@
 import Plot from "react-plotly.js";
+import type Plotly from "plotly.js";
 import { Typography, Box } from "@mui/material";
 
 interface WaterfallItem {
@@ -24,7 +25,6 @@ export default function ShapWaterfall({
     (w) => `${w.feature} = ${w.feature_value.toFixed(1)}`
   );
   const values = items.map((w) => w.shap_value);
-  const colors = values.map((v) => (v >= 0 ? "#ff4444" : "#4444ff"));
 
   return (
     <Box>
@@ -42,17 +42,17 @@ export default function ShapWaterfall({
               "absolute",
               ...values.map(() => "relative"),
               "total",
-            ] as ("absolute" | "relative" | "total")[],
+            ],
             connector: { line: { color: "#ccc" } },
             decreasing: { marker: { color: "#4444ff" } },
             increasing: { marker: { color: "#ff4444" } },
             totals: { marker: { color: "#333" } },
-          },
+          } as Plotly.Data,
         ]}
         layout={{
           height: 400,
           margin: { l: 200, r: 40, t: 20, b: 40 },
-          xaxis: { title: "Compressive Strength (MPa)" },
+          xaxis: { title: { text: "Compressive Strength (MPa)" } },
           showlegend: false,
         }}
         config={{ responsive: true }}

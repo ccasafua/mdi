@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  Box, Typography, TextField, Grid, Paper, Button, Chip, Divider,
+  Box, Typography, TextField, Grid, Paper, Chip, Divider,
 } from "@mui/material";
 import MicrostructureCanvas from "./MicrostructureCanvas";
 

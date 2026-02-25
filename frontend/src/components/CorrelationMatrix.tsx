@@ -26,7 +26,7 @@ export default function CorrelationMatrix({ columns, matrix }: CorrelationMatrix
             colorscale: "RdBu" as const,
             zmin: -1,
             zmax: 1,
-            text: z.map((row) => row.map((v) => v.toFixed(2))),
+            text: z.map((row) => row.map((v) => v.toFixed(2))) as unknown as string[],
             hovertemplate: "%{y} vs %{x}: %{z:.3f}<extra></extra>",
           },
         ]}
