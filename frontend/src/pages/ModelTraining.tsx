@@ -9,6 +9,8 @@ import {
 } from "recharts";
 import { trainModel, listModels, getModelMetrics, predictWithUncertainty } from "../api/client";
 import MetricsCard from "../components/MetricsCard";
+import ModelConfidence from "../components/ModelConfidence";
+import DesignInsights from "../components/DesignInsights";
 
 interface ModelInfo {
   model_id: string;
@@ -194,6 +196,8 @@ export default function ModelTraining() {
             </Grid>
           </Grid>
 
+          <ModelConfidence r2={metrics.r2} mae={metrics.mae} rmse={metrics.rmse} />
+
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
               Actual vs Predicted
@@ -241,6 +245,14 @@ export default function ModelTraining() {
                 )}
               </Grid>
             </Grid>
+            {predictionResult !== null && (
+              <DesignInsights
+                prediction={predictionResult.prediction}
+                features={Object.fromEntries(FEATURES.map((f) => [f, parseFloat(predictionInput[f]) || 0]))}
+                lowerBound={predictionResult.lower}
+                upperBound={predictionResult.upper}
+              />
+            )}
           </Paper>
         </>
       )}

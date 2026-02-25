@@ -7,6 +7,7 @@ import {
   ResponsiveContainer, Area, ComposedChart, ReferenceArea,
 } from "recharts";
 import { parametricSweep } from "../api/client";
+import DesignInsights from "./DesignInsights";
 
 const FEATURES = [
   "cement", "blast_furnace_slag", "fly_ash", "water",
@@ -125,6 +126,10 @@ export default function ParametricExploration({ modelId }: Props) {
               <Line type="monotone" dataKey="prediction" stroke="#1976d2" strokeWidth={2} dot={false} name="Prediction" />
             </ComposedChart>
           </ResponsiveContainer>
+          <DesignInsights
+            prediction={result.optimal_region.best_prediction}
+            features={Object.fromEntries(FEATURES.map((f) => [f, parseFloat(baseConfig[f]) || 0]))}
+          />
         </Paper>
       )}
     </Box>

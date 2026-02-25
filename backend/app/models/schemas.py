@@ -14,6 +14,11 @@ class DatasetInfo(BaseModel):
     units: dict[str, str]
 
 
+class UploadDatasetResponse(BaseModel):
+    message: str
+    dataset: DatasetInfo
+
+
 class FeatureStats(BaseModel):
     name: str
     mean: float

@@ -18,6 +18,14 @@ export const getCorrelations = (name: string) =>
 export const getUnifiedSummary = (sources?: string) =>
   api.get("/datasets/unified/summary", { params: sources ? { sources } : {} });
 
+export const uploadDataset = (formData: FormData) =>
+  api.post("/datasets/upload", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+
+export const deleteDataset = (name: string) =>
+  api.delete(`/datasets/${name}`);
+
 // --- Models ---
 export const listModels = () => api.get("/models");
 export const trainModel = (params: {

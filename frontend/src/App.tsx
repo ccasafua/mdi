@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-do
 import {
   AppBar, Toolbar, Typography, Box, Drawer, List, ListItemButton,
   ListItemIcon, ListItemText, CssBaseline, ThemeProvider, createTheme,
+  ToggleButtonGroup, ToggleButton,
 } from "@mui/material";
 import StorageIcon from "@mui/icons-material/Storage";
 import ModelTrainingIcon from "@mui/icons-material/Psychology";
@@ -13,6 +14,7 @@ import ModelTraining from "./pages/ModelTraining";
 import Explanations from "./pages/Explanations";
 import ExplorationLab from "./pages/ExplorationLab";
 import Configurations from "./pages/Configurations";
+import { ModeProvider, useMode, type Mode } from "./contexts/ModeContext";
 
 const drawerWidth = 220;
 
@@ -50,10 +52,34 @@ function NavContent() {
   );
 }
 
+function ModeToggle() {
+  const { mode, setMode } = useMode();
+  return (
+    <ToggleButtonGroup
+      value={mode}
+      exclusive
+      onChange={(_, v: Mode | null) => { if (v) setMode(v); }}
+      size="small"
+      sx={{
+        ml: "auto",
+        "& .MuiToggleButton-root": {
+          color: "rgba(255,255,255,0.7)",
+          borderColor: "rgba(255,255,255,0.3)",
+          "&.Mui-selected": { color: "#fff", bgcolor: "rgba(255,255,255,0.15)" },
+        },
+      }}
+    >
+      <ToggleButton value="technical">Tecnico</ToggleButton>
+      <ToggleButton value="design">Diseno</ToggleButton>
+    </ToggleButtonGroup>
+  );
+}
+
 export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      <ModeProvider>
       <BrowserRouter>
         <Box sx={{ display: "flex" }}>
           <AppBar
@@ -64,6 +90,7 @@ export default function App() {
               <Typography variant="h6" noWrap>
                 Material Design Intelligence (MDI)
               </Typography>
+              <ModeToggle />
             </Toolbar>
           </AppBar>
           <Drawer
@@ -94,6 +121,7 @@ export default function App() {
           </Box>
         </Box>
       </BrowserRouter>
+      </ModeProvider>
     </ThemeProvider>
   );
 }

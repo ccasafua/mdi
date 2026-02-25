@@ -71,3 +71,5 @@ DATASETS = {
         },
     },
 }
+
+BUILTIN_DATASETS = set(DATASETS.keys())

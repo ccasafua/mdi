@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from ..config import DATA_DIR, DATASETS, UNIFIED_FEATURES
+from ..config import DATA_DIR, DATASETS, UNIFIED_FEATURES, BUILTIN_DATASETS
 
 
 class DataService:
@@ -35,6 +35,52 @@ class DataService:
                 "units": config["units"],
             })
         return result
+
+    def register_dataset(self, name: str, description: str, target: str, df: pd.DataFrame) -> dict:
+        if name in DATASETS:
+            raise ValueError(f"Dataset '{name}' already exists")
+        if target not in df.columns:
+            raise ValueError(f"Target column '{target}' not found in data. Columns: {list(df.columns)}")
+        numeric_cols = df.select_dtypes(include="number").columns.tolist()
+        if len(numeric_cols) < 2:
+            raise ValueError("Dataset must have at least 2 numeric columns")
+        features = [c for c in numeric_cols if c != target]
+        if not features:
+            raise ValueError("No numeric feature columns found besides target")
+
+        csv_path = DATA_DIR / f"{name}.csv"
+        df.to_csv(csv_path, index=False)
+
+        DATASETS[name] = {
+            "file": f"{name}.csv",
+            "description": description,
+            "source_label": name,
+            "features": features,
+            "target": target,
+            "units": {},
+        }
+        self._cache[name] = df
+
+        return {
+            "name": name,
+            "description": description,
+            "source_label": name,
+            "features": features,
+            "target": target,
+            "num_samples": len(df),
+            "units": {},
+        }
+
+    def remove_dataset(self, name: str) -> None:
+        if name in BUILTIN_DATASETS:
+            raise ValueError(f"Cannot delete built-in dataset '{name}'")
+        if name not in DATASETS:
+            raise ValueError(f"Dataset '{name}' not found")
+        config = DATASETS.pop(name)
+        self._cache.pop(name, None)
+        csv_path = DATA_DIR / config["file"]
+        if csv_path.exists():
+            csv_path.unlink()
 
     def get_summary(self, name: str) -> dict:
         df = self.load_dataset(name)

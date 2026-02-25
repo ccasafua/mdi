@@ -11,6 +11,7 @@ import {
 import FeatureImportance from "../components/FeatureImportance";
 import ShapSummary from "../components/ShapSummary";
 import ShapWaterfall from "../components/ShapWaterfall";
+import DesignInsights from "../components/DesignInsights";
 
 const FEATURES = [
   "cement", "blast_furnace_slag", "fly_ash", "water",
@@ -239,6 +240,10 @@ export default function Explanations() {
                       waterfall={explanation.waterfall}
                       baseValue={explanation.base_value}
                       prediction={explanation.prediction}
+                    />
+                    <DesignInsights
+                      prediction={explanation.prediction}
+                      features={Object.fromEntries(FEATURES.map((f) => [f, parseFloat(predInput[f]) || 0]))}
                     />
                   </Box>
                 )}

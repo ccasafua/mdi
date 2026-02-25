@@ -7,6 +7,7 @@ import {
   ResponsiveContainer, ErrorBar,
 } from "recharts";
 import { compareConfigurations, saveConfiguration } from "../api/client";
+import DesignInsights from "./DesignInsights";
 
 const FEATURES = [
   "cement", "blast_furnace_slag", "fly_ash", "water",
@@ -167,6 +168,12 @@ export default function ConfigurationComparison({ modelId }: Props) {
                   >
                     Save as Candidate
                   </Button>
+                  <DesignInsights
+                    prediction={r.prediction}
+                    features={Object.fromEntries(FEATURES.map((f) => [f, parseFloat(configs[idx].values[f]) || 0]))}
+                    lowerBound={r.lower_bound}
+                    upperBound={r.upper_bound}
+                  />
                 </Paper>
               </Grid>
             ))}
