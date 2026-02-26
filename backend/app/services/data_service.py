@@ -1,11 +1,81 @@
+import io
+import json
 import pandas as pd
 import numpy as np
-from ..config import DATA_DIR, DATASETS, UNIFIED_FEATURES, BUILTIN_DATASETS
+from ..config import DATA_DIR, DATASETS, UNIFIED_FEATURES, BUILTIN_DATASETS, SUPABASE_URL, SUPABASE_KEY, SUPABASE_BUCKET
 
 
 class DataService:
     def __init__(self):
         self._cache: dict[str, pd.DataFrame] = {}
+        self._storage = None
+        if SUPABASE_URL and SUPABASE_KEY:
+            try:
+                from supabase import create_client
+                client = create_client(SUPABASE_URL, SUPABASE_KEY)
+                self._storage = client.storage
+                self._load_all_datasets()
+            except Exception as e:
+                print(f"[DataService] Supabase init failed: {e}")
+
+    def _persist_dataset(self, name: str, df: pd.DataFrame) -> None:
+        if not self._storage:
+            return
+        try:
+            csv_buf = df.to_csv(index=False).encode()
+            self._storage.from_(SUPABASE_BUCKET).upload(
+                f"datasets/{name}.csv",
+                csv_buf,
+                file_options={"content-type": "text/csv", "upsert": "true"},
+            )
+            meta = {k: v for k, v in DATASETS[name].items() if k != "file"}
+            meta_buf = json.dumps(meta).encode()
+            self._storage.from_(SUPABASE_BUCKET).upload(
+                f"datasets/{name}.json",
+                meta_buf,
+                file_options={"content-type": "application/json", "upsert": "true"},
+            )
+        except Exception as e:
+            print(f"[DataService] Persist dataset {name} failed: {e}")
+
+    def _remove_dataset_remote(self, name: str) -> None:
+        if not self._storage:
+            return
+        try:
+            self._storage.from_(SUPABASE_BUCKET).remove([
+                f"datasets/{name}.csv",
+                f"datasets/{name}.json",
+            ])
+        except Exception as e:
+            print(f"[DataService] Remove remote dataset {name} failed: {e}")
+
+    def _load_all_datasets(self) -> None:
+        if not self._storage:
+            return
+        try:
+            files = self._storage.from_(SUPABASE_BUCKET).list("datasets")
+            json_files = [f["name"] for f in files if f["name"].endswith(".json")]
+            count = 0
+            for jf in json_files:
+                name = jf[:-5]
+                if name in DATASETS:
+                    continue
+                meta_data = self._storage.from_(SUPABASE_BUCKET).download(f"datasets/{jf}")
+                meta = json.loads(meta_data)
+                csv_data = self._storage.from_(SUPABASE_BUCKET).download(f"datasets/{name}.csv")
+                df = pd.read_csv(io.BytesIO(csv_data))
+                csv_path = DATA_DIR / f"{name}.csv"
+                df.to_csv(csv_path, index=False)
+                DATASETS[name] = {
+                    "file": f"{name}.csv",
+                    **meta,
+                }
+                self._cache[name] = df
+                count += 1
+            if count:
+                print(f"[DataService] Loaded {count} custom dataset(s) from Supabase")
+        except Exception as e:
+            print(f"[DataService] Load datasets from Supabase failed: {e}")
 
     def _get_config(self, name: str) -> dict:
         if name not in DATASETS:
@@ -60,6 +130,7 @@ class DataService:
             "units": {},
         }
         self._cache[name] = df
+        self._persist_dataset(name, df)
 
         return {
             "name": name,
@@ -81,6 +152,7 @@ class DataService:
         csv_path = DATA_DIR / config["file"]
         if csv_path.exists():
             csv_path.unlink()
+        self._remove_dataset_remote(name)
 
     def get_summary(self, name: str) -> dict:
         df = self.load_dataset(name)
