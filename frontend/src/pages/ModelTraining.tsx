@@ -7,7 +7,7 @@ import {
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
 } from "recharts";
-import { trainModel, getModelMetrics, predictWithUncertainty } from "../api/client";
+import { trainModel, getModelMetrics, predictWithUncertainty, saveConfiguration } from "../api/client";
 import MetricsCard from "../components/MetricsCard";
 import ModelConfidence from "../components/ModelConfidence";
 import DesignInsights from "../components/DesignInsights";
@@ -62,6 +62,7 @@ export default function ModelTraining() {
     upper: number;
   } | null>(null);
   const [error, setError] = useState<string>("");
+  const [saveMsg, setSaveMsg] = useState("");
 
   const handleTrain = async () => {
     setTraining(true);
@@ -108,6 +109,26 @@ export default function ModelTraining() {
       });
     } catch {
       setError("Prediction failed");
+    }
+  };
+
+  const handleSaveConfig = async () => {
+    if (!selectedModel || !predictionResult) return;
+    const values: Record<string, number> = {};
+    for (const f of FEATURES) values[f] = parseFloat(predictionInput[f]) || 0;
+    try {
+      await saveConfiguration({
+        label: `Pred-${Date.now().toString(36)}`,
+        values,
+        model_id: selectedModel,
+        predicted_strength: predictionResult.prediction,
+        lower_bound: predictionResult.lower,
+        upper_bound: predictionResult.upper,
+      });
+      setSaveMsg("Configuración guardada");
+      setTimeout(() => setSaveMsg(""), 3000);
+    } catch {
+      setError("Error al guardar configuración");
     }
   };
 
@@ -305,10 +326,19 @@ export default function ModelTraining() {
                   Predict
                 </Button>
                 {predictionResult !== null && (
-                  <Typography variant="h6" sx={{ ml: 2, display: "inline" }}>
-                    {predictionResult.prediction.toFixed(1)} MPa [{predictionResult.lower.toFixed(1)} &mdash; {predictionResult.upper.toFixed(1)}] (95% CI)
-                  </Typography>
+                  <>
+                    <Typography variant="h6" sx={{ ml: 2, display: "inline" }}>
+                      {predictionResult.prediction.toFixed(1)} MPa [{predictionResult.lower.toFixed(1)} &mdash; {predictionResult.upper.toFixed(1)}] (95% CI)
+                    </Typography>
+                    <Button
+                      variant="outlined" sx={{ ml: 2 }}
+                      onClick={handleSaveConfig}
+                    >
+                      Guardar Configuración
+                    </Button>
+                  </>
                 )}
+                {saveMsg && <Alert severity="success" sx={{ mt: 1 }}>{saveMsg}</Alert>}
               </Grid>
             </Grid>
             {predictionResult !== null && (
