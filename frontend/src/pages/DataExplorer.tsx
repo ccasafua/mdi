@@ -29,12 +29,6 @@ interface Distribution {
   bins: { bin_start: number; bin_end: number; count: number }[];
 }
 
-interface DatasetOption {
-  name: string;
-  description: string;
-  num_samples: number;
-}
-
 const BUILTIN_DATASETS = new Set(["concrete", "concrete_xai", "geopolymer"]);
 
 export default function DataExplorer() {
