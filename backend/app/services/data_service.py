@@ -17,6 +17,7 @@ class DataService:
                 self._load_all_datasets()
             except Exception as e:
                 print(f"[DataService] Supabase init failed: {e}")
+                self._storage = None
 
     def _persist_dataset(self, name: str, df: pd.DataFrame) -> None:
         if not self._storage:
@@ -24,14 +25,14 @@ class DataService:
         try:
             csv_buf = df.to_csv(index=False).encode()
             self._storage.from_(SUPABASE_BUCKET).upload(
-                f"datasets/{name}.csv",
+                f"ds_{name}.csv",
                 csv_buf,
                 file_options={"content-type": "text/csv", "upsert": "true"},
             )
             meta = {k: v for k, v in DATASETS[name].items() if k != "file"}
             meta_buf = json.dumps(meta).encode()
             self._storage.from_(SUPABASE_BUCKET).upload(
-                f"datasets/{name}.json",
+                f"ds_{name}.json",
                 meta_buf,
                 file_options={"content-type": "application/json", "upsert": "true"},
             )
@@ -43,8 +44,8 @@ class DataService:
             return
         try:
             self._storage.from_(SUPABASE_BUCKET).remove([
-                f"datasets/{name}.csv",
-                f"datasets/{name}.json",
+                f"ds_{name}.csv",
+                f"ds_{name}.json",
             ])
         except Exception as e:
             print(f"[DataService] Remove remote dataset {name} failed: {e}")
@@ -53,16 +54,19 @@ class DataService:
         if not self._storage:
             return
         try:
-            files = self._storage.from_(SUPABASE_BUCKET).list("datasets")
-            json_files = [f["name"] for f in files if f["name"].endswith(".json")]
+            files = self._storage.from_(SUPABASE_BUCKET).list() or []
+            json_files = [
+                f["name"] for f in files
+                if isinstance(f, dict) and f.get("name", "").startswith("ds_") and f["name"].endswith(".json")
+            ]
             count = 0
             for jf in json_files:
-                name = jf[:-5]
+                name = jf[3:-5]  # strip "ds_" prefix and ".json" suffix
                 if name in DATASETS:
                     continue
-                meta_data = self._storage.from_(SUPABASE_BUCKET).download(f"datasets/{jf}")
+                meta_data = self._storage.from_(SUPABASE_BUCKET).download(jf)
                 meta = json.loads(meta_data)
-                csv_data = self._storage.from_(SUPABASE_BUCKET).download(f"datasets/{name}.csv")
+                csv_data = self._storage.from_(SUPABASE_BUCKET).download(f"ds_{name}.csv")
                 df = pd.read_csv(io.BytesIO(csv_data))
                 csv_path = DATA_DIR / f"{name}.csv"
                 df.to_csv(csv_path, index=False)
