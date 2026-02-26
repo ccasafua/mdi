@@ -25,6 +25,10 @@ def train_model(req: TrainRequest):
             max_depth=req.max_depth,
             learning_rate=req.learning_rate,
             random_state=req.random_state,
+            alpha=req.alpha,
+            kernel=req.kernel,
+            C=req.C,
+            n_neighbors=req.n_neighbors,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

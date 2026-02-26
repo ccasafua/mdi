@@ -2,11 +2,21 @@ import io
 import uuid
 import numpy as np
 import joblib
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.ensemble import (
+    RandomForestRegressor, GradientBoostingRegressor,
+    ExtraTreesRegressor, AdaBoostRegressor,
+)
+from sklearn.linear_model import Ridge, Lasso
+from sklearn.svm import SVR
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_absolute_error, root_mean_squared_error
 from .data_service import data_service
 from ..config import DATASETS, SUPABASE_URL, SUPABASE_KEY, SUPABASE_BUCKET
+
+TREE_ALGORITHMS = {"random_forest", "gradient_boosting", "extra_trees", "adaboost"}
 
 
 class ModelService:
@@ -55,6 +65,65 @@ class ModelService:
         except Exception as e:
             print(f"[ModelService] Load from Supabase failed: {e}")
 
+    def _build_model(
+        self,
+        algorithm: str,
+        n_estimators: int,
+        max_depth: int | None,
+        learning_rate: float,
+        random_state: int,
+        alpha: float,
+        kernel: str,
+        C: float,
+        n_neighbors: int,
+    ) -> tuple:
+        """Return (model, params_dict) for the given algorithm."""
+        if algorithm == "random_forest":
+            params = {"n_estimators": n_estimators, "random_state": random_state}
+            if max_depth is not None:
+                params["max_depth"] = max_depth
+            return RandomForestRegressor(**params), params
+
+        if algorithm == "gradient_boosting":
+            params = {
+                "n_estimators": n_estimators, "random_state": random_state,
+                "learning_rate": learning_rate,
+            }
+            if max_depth is not None:
+                params["max_depth"] = max_depth
+            return GradientBoostingRegressor(**params), params
+
+        if algorithm == "extra_trees":
+            params = {"n_estimators": n_estimators, "random_state": random_state}
+            if max_depth is not None:
+                params["max_depth"] = max_depth
+            return ExtraTreesRegressor(**params), params
+
+        if algorithm == "adaboost":
+            params = {
+                "n_estimators": n_estimators, "random_state": random_state,
+                "learning_rate": learning_rate,
+            }
+            return AdaBoostRegressor(**params), params
+
+        if algorithm == "ridge":
+            params = {"alpha": alpha}
+            return make_pipeline(StandardScaler(), Ridge(**params)), params
+
+        if algorithm == "lasso":
+            params = {"alpha": alpha}
+            return make_pipeline(StandardScaler(), Lasso(**params)), params
+
+        if algorithm == "svr":
+            params = {"C": C, "kernel": kernel}
+            return make_pipeline(StandardScaler(), SVR(**params)), params
+
+        if algorithm == "knn":
+            params = {"n_neighbors": n_neighbors}
+            return make_pipeline(StandardScaler(), KNeighborsRegressor(**params)), params
+
+        raise ValueError(f"Unknown algorithm: {algorithm}")
+
     def train(
         self,
         algorithm: str,
@@ -63,6 +132,10 @@ class ModelService:
         max_depth: int | None = None,
         learning_rate: float = 0.1,
         random_state: int = 42,
+        alpha: float = 1.0,
+        kernel: str = "rbf",
+        C: float = 1.0,
+        n_neighbors: int = 5,
     ) -> dict:
         df = data_service.load_dataset("concrete")
         config = DATASETS["concrete"]
@@ -73,18 +146,10 @@ class ModelService:
             X, y, test_size=test_size, random_state=random_state,
         )
 
-        params = {"n_estimators": n_estimators, "random_state": random_state}
-        if algorithm == "random_forest":
-            if max_depth is not None:
-                params["max_depth"] = max_depth
-            model = RandomForestRegressor(**params)
-        elif algorithm == "gradient_boosting":
-            params["learning_rate"] = learning_rate
-            if max_depth is not None:
-                params["max_depth"] = max_depth
-            model = GradientBoostingRegressor(**params)
-        else:
-            raise ValueError(f"Unknown algorithm: {algorithm}")
+        model, params = self._build_model(
+            algorithm, n_estimators, max_depth, learning_rate,
+            random_state, alpha, kernel, C, n_neighbors,
+        )
 
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
@@ -92,6 +157,9 @@ class ModelService:
         r2 = float(r2_score(y_test, y_pred))
         mae = float(mean_absolute_error(y_test, y_pred))
         rmse = float(root_mean_squared_error(y_test, y_pred))
+
+        # Residual std for uncertainty in non-ensemble models
+        residual_std = float(np.std(y_test - y_pred))
 
         model_id = str(uuid.uuid4())[:8]
         entry = {
@@ -101,6 +169,7 @@ class ModelService:
             "r2": round(r2, 4),
             "mae": round(mae, 4),
             "rmse": round(rmse, 4),
+            "residual_std": round(residual_std, 4),
             "X_test": X_test,
             "y_test": y_test,
             "y_pred": y_pred,
@@ -154,7 +223,7 @@ class ModelService:
 
         prediction = float(model.predict(X)[0])
 
-        if algorithm == "random_forest":
+        if algorithm == "random_forest" or algorithm == "extra_trees":
             tree_preds = np.array([t.predict(X)[0] for t in model.estimators_])
             std_dev = float(np.std(tree_preds))
             lower = float(np.percentile(tree_preds, 2.5))
@@ -162,11 +231,13 @@ class ModelService:
         elif algorithm == "gradient_boosting":
             lower = float(entry["quantile_lower"].predict(X)[0])
             upper = float(entry["quantile_upper"].predict(X)[0])
-            std_dev = (upper - lower) / 3.92  # approx from 95% CI
+            std_dev = (upper - lower) / 3.92
         else:
-            std_dev = 0.0
-            lower = prediction
-            upper = prediction
+            # Residual-based uncertainty for non-ensemble models
+            residual_std = entry.get("residual_std", 0.0)
+            std_dev = residual_std
+            lower = prediction - 1.96 * residual_std
+            upper = prediction + 1.96 * residual_std
 
         return {
             "prediction": round(prediction, 4),

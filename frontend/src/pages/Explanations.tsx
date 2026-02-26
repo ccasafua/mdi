@@ -1,32 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Box, Typography, Button, TextField, Grid, CircularProgress,
   Paper, MenuItem, Alert, Divider,
 } from "@mui/material";
 import Plot from "react-plotly.js";
 import {
-  listModels, computeShap, getShapSummary, getFeatureImportance,
+  computeShap, getShapSummary, getFeatureImportance,
   explainPrediction, getDependenceData,
 } from "../api/client";
 import FeatureImportance from "../components/FeatureImportance";
 import ShapSummary from "../components/ShapSummary";
 import ShapWaterfall from "../components/ShapWaterfall";
 import DesignInsights from "../components/DesignInsights";
+import { useModel } from "../contexts/ModelContext";
 
 const FEATURES = [
   "cement", "blast_furnace_slag", "fly_ash", "water",
   "superplasticizer", "coarse_aggregate", "fine_aggregate", "age",
 ];
 
-interface ModelInfo {
-  model_id: string;
-  algorithm: string;
-  r2: number;
-}
-
 export default function Explanations() {
-  const [models, setModels] = useState<ModelInfo[]>([]);
-  const [selectedModel, setSelectedModel] = useState("");
+  const { models, selectedModel } = useModel();
   const [computing, setComputing] = useState(false);
   const [shapReady, setShapReady] = useState(false);
   const [summaryData, setSummaryData] = useState<{
@@ -52,13 +46,6 @@ export default function Explanations() {
     points: { feature_value: number; shap_value: number; color_value: number }[];
   } | null>(null);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    listModels().then((res) => {
-      setModels(res.data);
-      if (res.data.length > 0) setSelectedModel(res.data[0].model_id);
-    });
-  }, []);
 
   const handleComputeShap = async () => {
     if (!selectedModel) return;
@@ -114,33 +101,12 @@ export default function Explanations() {
       ) : (
         <>
           <Paper sx={{ p: 3, mb: 3 }}>
-            <Grid container spacing={2} alignItems="center">
-              <Grid size={{ xs: 12, sm: 4 }}>
-                <TextField
-                  select fullWidth label="Select Model" value={selectedModel}
-                  onChange={(e) => {
-                    setSelectedModel(e.target.value);
-                    setShapReady(false);
-                    setSummaryData(null);
-                    setImportanceData(null);
-                  }}
-                >
-                  {models.map((m) => (
-                    <MenuItem key={m.model_id} value={m.model_id}>
-                      {m.algorithm} ({m.model_id}) - R²: {m.r2.toFixed(3)}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 3 }}>
-                <Button
-                  variant="contained" fullWidth onClick={handleComputeShap}
-                  disabled={computing || !selectedModel} sx={{ height: 56 }}
-                >
-                  {computing ? <CircularProgress size={24} /> : "Compute SHAP"}
-                </Button>
-              </Grid>
-            </Grid>
+            <Button
+              variant="contained" onClick={handleComputeShap}
+              disabled={computing || !selectedModel} sx={{ height: 56 }}
+            >
+              {computing ? <CircularProgress size={24} /> : "Compute SHAP"}
+            </Button>
           </Paper>
 
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}

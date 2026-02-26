@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Box, Typography, Button, TextField, MenuItem, Grid,
   CircularProgress, Paper, Alert, Divider,
@@ -7,32 +7,48 @@ import {
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
 } from "recharts";
-import { trainModel, listModels, getModelMetrics, predictWithUncertainty } from "../api/client";
+import { trainModel, getModelMetrics, predictWithUncertainty } from "../api/client";
 import MetricsCard from "../components/MetricsCard";
 import ModelConfidence from "../components/ModelConfidence";
 import DesignInsights from "../components/DesignInsights";
-
-interface ModelInfo {
-  model_id: string;
-  algorithm: string;
-  r2: number;
-  mae: number;
-  rmse: number;
-}
+import { useModel } from "../contexts/ModelContext";
 
 const FEATURES = [
   "cement", "blast_furnace_slag", "fly_ash", "water",
   "superplasticizer", "coarse_aggregate", "fine_aggregate", "age",
 ];
 
+const ALGORITHMS = [
+  { value: "random_forest", label: "Random Forest" },
+  { value: "gradient_boosting", label: "Gradient Boosting" },
+  { value: "extra_trees", label: "Extra Trees" },
+  { value: "adaboost", label: "AdaBoost" },
+  { value: "ridge", label: "Ridge" },
+  { value: "lasso", label: "Lasso" },
+  { value: "svr", label: "SVR" },
+  { value: "knn", label: "KNN" },
+];
+
+const ALGO_LABELS: Record<string, string> = Object.fromEntries(
+  ALGORITHMS.map((a) => [a.value, a.label])
+);
+
+const HAS_N_ESTIMATORS = new Set(["random_forest", "gradient_boosting", "extra_trees", "adaboost"]);
+const HAS_MAX_DEPTH = new Set(["random_forest", "gradient_boosting", "extra_trees"]);
+const HAS_LEARNING_RATE = new Set(["gradient_boosting", "adaboost"]);
+const HAS_ALPHA = new Set(["ridge", "lasso"]);
+
 export default function ModelTraining() {
   const [algorithm, setAlgorithm] = useState("random_forest");
   const [nEstimators, setNEstimators] = useState(100);
   const [maxDepth, setMaxDepth] = useState<string>("");
   const [learningRate, setLearningRate] = useState(0.1);
+  const [alpha, setAlpha] = useState(1.0);
+  const [svrC, setSvrC] = useState(1.0);
+  const [kernel, setKernel] = useState("rbf");
+  const [nNeighbors, setNNeighbors] = useState(5);
+  const { models, selectedModel, setSelectedModel, refreshModels } = useModel();
   const [training, setTraining] = useState(false);
-  const [models, setModels] = useState<ModelInfo[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>("");
   const [metrics, setMetrics] = useState<{
     r2: number; mae: number; rmse: number;
     actual: number[]; predicted: number[];
@@ -47,25 +63,21 @@ export default function ModelTraining() {
   } | null>(null);
   const [error, setError] = useState<string>("");
 
-  useEffect(() => {
-    listModels().then((res) => setModels(res.data));
-  }, []);
-
   const handleTrain = async () => {
     setTraining(true);
     setError("");
     try {
-      const params: Record<string, unknown> = {
-        algorithm,
-        n_estimators: nEstimators,
-      };
-      if (maxDepth) params.max_depth = parseInt(maxDepth);
-      if (algorithm === "gradient_boosting")
-        params.learning_rate = learningRate;
+      const params: Record<string, unknown> = { algorithm };
+      if (HAS_N_ESTIMATORS.has(algorithm)) params.n_estimators = nEstimators;
+      if (maxDepth && HAS_MAX_DEPTH.has(algorithm)) params.max_depth = parseInt(maxDepth);
+      if (HAS_LEARNING_RATE.has(algorithm)) params.learning_rate = learningRate;
+      if (HAS_ALPHA.has(algorithm)) params.alpha = alpha;
+      if (algorithm === "svr") { params.C = svrC; params.kernel = kernel; }
+      if (algorithm === "knn") params.n_neighbors = nNeighbors;
 
       const res = await trainModel(params as Parameters<typeof trainModel>[0]);
       const newModel = res.data;
-      setModels((prev) => [...prev, newModel]);
+      await refreshModels();
       setSelectedModel(newModel.model_id);
       const metricsRes = await getModelMetrics(newModel.model_id);
       setMetrics(metricsRes.data);
@@ -119,25 +131,33 @@ export default function ModelTraining() {
               select fullWidth label="Algorithm" value={algorithm}
               onChange={(e) => setAlgorithm(e.target.value)}
             >
-              <MenuItem value="random_forest">Random Forest</MenuItem>
-              <MenuItem value="gradient_boosting">Gradient Boosting</MenuItem>
+              {ALGORITHMS.map((a) => (
+                <MenuItem key={a.value} value={a.value}>{a.label}</MenuItem>
+              ))}
             </TextField>
           </Grid>
-          <Grid size={{ xs: 6, sm: 2 }}>
-            <TextField
-              fullWidth label="n_estimators" type="number"
-              value={nEstimators}
-              onChange={(e) => setNEstimators(parseInt(e.target.value) || 100)}
-            />
-          </Grid>
-          <Grid size={{ xs: 6, sm: 2 }}>
-            <TextField
-              fullWidth label="max_depth" type="number" placeholder="None"
-              value={maxDepth}
-              onChange={(e) => setMaxDepth(e.target.value)}
-            />
-          </Grid>
-          {algorithm === "gradient_boosting" && (
+
+          {HAS_N_ESTIMATORS.has(algorithm) && (
+            <Grid size={{ xs: 6, sm: 2 }}>
+              <TextField
+                fullWidth label="n_estimators" type="number"
+                value={nEstimators}
+                onChange={(e) => setNEstimators(parseInt(e.target.value) || 100)}
+              />
+            </Grid>
+          )}
+
+          {HAS_MAX_DEPTH.has(algorithm) && (
+            <Grid size={{ xs: 6, sm: 2 }}>
+              <TextField
+                fullWidth label="max_depth" type="number" placeholder="None"
+                value={maxDepth}
+                onChange={(e) => setMaxDepth(e.target.value)}
+              />
+            </Grid>
+          )}
+
+          {HAS_LEARNING_RATE.has(algorithm) && (
             <Grid size={{ xs: 6, sm: 2 }}>
               <TextField
                 fullWidth label="learning_rate" type="number"
@@ -147,6 +167,51 @@ export default function ModelTraining() {
               />
             </Grid>
           )}
+
+          {HAS_ALPHA.has(algorithm) && (
+            <Grid size={{ xs: 6, sm: 2 }}>
+              <TextField
+                fullWidth label="alpha" type="number"
+                value={alpha}
+                onChange={(e) => setAlpha(parseFloat(e.target.value) || 1.0)}
+                inputProps={{ step: 0.1 }}
+              />
+            </Grid>
+          )}
+
+          {algorithm === "svr" && (
+            <>
+              <Grid size={{ xs: 6, sm: 2 }}>
+                <TextField
+                  fullWidth label="C" type="number"
+                  value={svrC}
+                  onChange={(e) => setSvrC(parseFloat(e.target.value) || 1.0)}
+                  inputProps={{ step: 0.1 }}
+                />
+              </Grid>
+              <Grid size={{ xs: 6, sm: 2 }}>
+                <TextField
+                  select fullWidth label="kernel" value={kernel}
+                  onChange={(e) => setKernel(e.target.value)}
+                >
+                  <MenuItem value="rbf">RBF</MenuItem>
+                  <MenuItem value="linear">Linear</MenuItem>
+                  <MenuItem value="poly">Poly</MenuItem>
+                </TextField>
+              </Grid>
+            </>
+          )}
+
+          {algorithm === "knn" && (
+            <Grid size={{ xs: 6, sm: 2 }}>
+              <TextField
+                fullWidth label="n_neighbors" type="number"
+                value={nNeighbors}
+                onChange={(e) => setNNeighbors(parseInt(e.target.value) || 5)}
+              />
+            </Grid>
+          )}
+
           <Grid size={{ xs: 12, sm: 2 }}>
             <Button
               variant="contained" fullWidth
@@ -173,8 +238,9 @@ export default function ModelTraining() {
                   variant={selectedModel === m.model_id ? "contained" : "outlined"}
                   onClick={() => handleSelectModel(m.model_id)}
                   size="small"
+                  sx={{ textTransform: "none" }}
                 >
-                  {m.algorithm} ({m.model_id}) - R²: {m.r2.toFixed(3)}
+                  {ALGO_LABELS[m.algorithm] || m.algorithm} ({m.model_id}) — R²: {m.r2.toFixed(3)}
                 </Button>
               </Grid>
             ))}

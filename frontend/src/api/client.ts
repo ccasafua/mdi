@@ -34,6 +34,10 @@ export const trainModel = (params: {
   n_estimators?: number;
   max_depth?: number | null;
   learning_rate?: number;
+  alpha?: number;
+  kernel?: string;
+  C?: number;
+  n_neighbors?: number;
 }) => api.post("/models/train", params);
 export const getModelMetrics = (modelId: string) =>
   api.get(`/models/${modelId}/metrics`);

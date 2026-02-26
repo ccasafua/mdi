@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-do
 import {
   AppBar, Toolbar, Typography, Box, Drawer, List, ListItemButton,
   ListItemIcon, ListItemText, CssBaseline, ThemeProvider, createTheme,
-  ToggleButtonGroup, ToggleButton,
+  ToggleButtonGroup, ToggleButton, Divider, TextField, MenuItem,
 } from "@mui/material";
 import StorageIcon from "@mui/icons-material/Storage";
 import ModelTrainingIcon from "@mui/icons-material/Psychology";
@@ -15,6 +15,8 @@ import Explanations from "./pages/Explanations";
 import ExplorationLab from "./pages/ExplorationLab";
 import Configurations from "./pages/Configurations";
 import { ModeProvider, useMode, type Mode } from "./contexts/ModeContext";
+import { ModelProvider } from "./contexts/ModelContext";
+import { DatasetProvider, useDataset } from "./contexts/DatasetContext";
 
 const drawerWidth = 220;
 
@@ -35,20 +37,45 @@ const navItems = [
 
 function NavContent() {
   const location = useLocation();
+  const { datasets, selectedDataset, setSelectedDataset } = useDataset();
   return (
-    <List>
-      {navItems.map((item) => (
-        <ListItemButton
-          key={item.path}
-          component={Link}
-          to={item.path}
-          selected={location.pathname === item.path}
-        >
-          <ListItemIcon>{item.icon}</ListItemIcon>
-          <ListItemText primary={item.label} />
-        </ListItemButton>
-      ))}
-    </List>
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <List>
+        {navItems.map((item) => (
+          <ListItemButton
+            key={item.path}
+            component={Link}
+            to={item.path}
+            selected={location.pathname === item.path}
+          >
+            <ListItemIcon>{item.icon}</ListItemIcon>
+            <ListItemText primary={item.label} />
+          </ListItemButton>
+        ))}
+      </List>
+      <Divider />
+      <Box sx={{ px: 2, py: 1.5 }}>
+        <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 1, display: "block" }}>
+          Dataset Activo
+        </Typography>
+        {datasets.length === 0 ? (
+          <Typography variant="body2" color="text.disabled" sx={{ fontStyle: "italic" }}>
+            Cargando...
+          </Typography>
+        ) : (
+          <TextField
+            select fullWidth size="small" value={selectedDataset}
+            onChange={(e) => setSelectedDataset(e.target.value)}
+          >
+            {datasets.map((ds) => (
+              <MenuItem key={ds.name} value={ds.name}>
+                {ds.name} ({ds.num_samples})
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
+      </Box>
+    </Box>
   );
 }
 
@@ -80,6 +107,8 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <ModeProvider>
+      <DatasetProvider>
+      <ModelProvider>
       <BrowserRouter>
         <Box sx={{ display: "flex" }}>
           <AppBar
@@ -121,6 +150,8 @@ export default function App() {
           </Box>
         </Box>
       </BrowserRouter>
+      </ModelProvider>
+      </DatasetProvider>
       </ModeProvider>
     </ThemeProvider>
   );

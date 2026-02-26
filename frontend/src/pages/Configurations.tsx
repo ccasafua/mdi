@@ -4,6 +4,8 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import { generateFichaTecnica } from "../utils/generatePDF";
 import {
   listConfigurations, markValidationCandidate,
   deleteConfiguration, exportConfigurations,
@@ -122,6 +124,9 @@ export default function Configurations() {
                     />
                   </TableCell>
                   <TableCell align="center">
+                    <IconButton size="small" onClick={() => generateFichaTecnica(cfg)} title="Descargar ficha técnica PDF">
+                      <PictureAsPdfIcon fontSize="small" />
+                    </IconButton>
                     <IconButton size="small" onClick={() => handleDelete(cfg.id)}>
                       <DeleteIcon fontSize="small" />
                     </IconButton>

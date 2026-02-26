@@ -9,11 +9,12 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import {
-  listDatasets, getDatasetSummary, getDatasetSample,
+  getDatasetSummary, getDatasetSample,
   getDatasetDistributions, getCorrelations, uploadDataset, deleteDataset,
 } from "../api/client";
 import DataTable from "../components/DataTable";
 import CorrelationMatrix from "../components/CorrelationMatrix";
+import { useDataset } from "../contexts/DatasetContext";
 
 interface FeatureStat {
   name: string;
@@ -37,8 +38,7 @@ interface DatasetOption {
 const BUILTIN_DATASETS = new Set(["concrete", "concrete_xai", "geopolymer"]);
 
 export default function DataExplorer() {
-  const [datasets, setDatasets] = useState<DatasetOption[]>([]);
-  const [selectedDataset, setSelectedDataset] = useState("concrete");
+  const { datasets, selectedDataset, setSelectedDataset, refreshDatasets } = useDataset();
   const [summary, setSummary] = useState<{
     num_samples: number;
     num_features: number;
@@ -66,12 +66,6 @@ export default function DataExplorer() {
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const refreshDatasets = () =>
-    listDatasets().then((res) => setDatasets(res.data));
-
-  useEffect(() => {
-    refreshDatasets();
-  }, []);
 
   useEffect(() => {
     setLoading(true);

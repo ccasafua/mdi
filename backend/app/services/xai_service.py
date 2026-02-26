@@ -1,11 +1,17 @@
 import numpy as np
 import shap
-from .model_service import model_service
+from .model_service import model_service, TREE_ALGORITHMS
 
 
 class XAIService:
     def __init__(self):
         self._cache: dict[str, dict] = {}
+
+    def _create_explainer(self, model, algorithm, X_train):
+        if algorithm in TREE_ALGORITHMS:
+            return shap.TreeExplainer(model)
+        background = shap.sample(X_train, min(100, len(X_train)))
+        return shap.KernelExplainer(model.predict, background)
 
     def compute_shap_values(self, model_id: str) -> dict:
         if model_id in self._cache:
@@ -14,9 +20,20 @@ class XAIService:
         entry = model_service.get_model_entry(model_id)
         model = entry["model"]
         X_test = entry["X_test"]
+        X_train = entry["X_train"]
+        algorithm = entry["algorithm"]
         feature_names = entry["feature_names"]
 
-        explainer = shap.TreeExplainer(model)
+        explainer = self._create_explainer(model, algorithm, X_train)
+
+        # For non-tree models, sample X_test to keep KernelExplainer fast
+        if algorithm not in TREE_ALGORITHMS:
+            sample_size = min(50, len(X_test))
+            indices = np.random.RandomState(42).choice(
+                len(X_test), sample_size, replace=False,
+            )
+            X_test = X_test[indices]
+
         shap_values = explainer.shap_values(X_test)
 
         result = {
@@ -69,10 +86,12 @@ class XAIService:
     def explain_prediction(self, model_id: str, input_data: dict[str, float]) -> dict:
         entry = model_service.get_model_entry(model_id)
         model = entry["model"]
+        algorithm = entry["algorithm"]
+        X_train = entry["X_train"]
         feature_names = entry["feature_names"]
         X = np.array([[input_data[f] for f in feature_names]])
 
-        explainer = shap.TreeExplainer(model)
+        explainer = self._create_explainer(model, algorithm, X_train)
         shap_values = explainer.shap_values(X)
 
         prediction = float(model.predict(X)[0])
@@ -148,10 +167,12 @@ class XAIService:
     def get_top_shap(self, model_id: str, input_data: dict[str, float], top_n: int = 3) -> list[dict]:
         entry = model_service.get_model_entry(model_id)
         model = entry["model"]
+        algorithm = entry["algorithm"]
+        X_train = entry["X_train"]
         feature_names = entry["feature_names"]
         X = np.array([[input_data[f] for f in feature_names]])
 
-        explainer = shap.TreeExplainer(model)
+        explainer = self._create_explainer(model, algorithm, X_train)
         shap_values = explainer.shap_values(X)
 
         items = []

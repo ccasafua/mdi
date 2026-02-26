@@ -67,12 +67,19 @@ class FeatureDistribution(BaseModel):
 # --- Model schemas ---
 
 class TrainRequest(BaseModel):
-    algorithm: str = Field(..., pattern="^(random_forest|gradient_boosting)$")
+    algorithm: str = Field(
+        ...,
+        pattern="^(random_forest|gradient_boosting|extra_trees|adaboost|ridge|lasso|svr|knn)$",
+    )
     test_size: float = Field(default=0.2, gt=0.0, lt=1.0)
     n_estimators: int = Field(default=100, ge=10, le=1000)
     max_depth: Optional[int] = Field(default=None, ge=1, le=50)
     learning_rate: Optional[float] = Field(default=0.1, gt=0.0, le=1.0)
     random_state: int = Field(default=42)
+    alpha: Optional[float] = Field(default=1.0, gt=0.0)
+    kernel: Optional[str] = Field(default="rbf", pattern="^(rbf|linear|poly)$")
+    C: Optional[float] = Field(default=1.0, gt=0.0)
+    n_neighbors: Optional[int] = Field(default=5, ge=1, le=50)
 
 
 class ModelInfo(BaseModel):
