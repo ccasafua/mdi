@@ -12,6 +12,7 @@ import ListAltIcon from "@mui/icons-material/ListAlt";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ArchitectureIcon from "@mui/icons-material/Architecture";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
+import EngineeringIcon from "@mui/icons-material/Engineering";
 import DataExplorer from "./pages/DataExplorer";
 import ModelTraining from "./pages/ModelTraining";
 import Explanations from "./pages/Explanations";
@@ -20,6 +21,7 @@ import Configurations from "./pages/Configurations";
 import FichaTecnica from "./pages/FichaTecnica";
 import DesignInterpretation from "./pages/DesignInterpretation";
 import InverseDesign from "./pages/InverseDesign";
+import StructuralDesign from "./pages/StructuralDesign";
 import { ModeProvider, useMode, type Mode } from "./contexts/ModeContext";
 import { ModelProvider } from "./contexts/ModelContext";
 import { DatasetProvider, useDataset } from "./contexts/DatasetContext";
@@ -56,6 +58,12 @@ const navSections: NavSection[] = [
     header: "Diseno Inverso",
     items: [
       { label: "Diseno Inverso", path: "/inverse-design", icon: <SwapHorizIcon /> },
+    ],
+  },
+  {
+    header: "Diseno Estructural",
+    items: [
+      { label: "Asistente Estructural", path: "/structural-design", icon: <EngineeringIcon /> },
     ],
   },
   {
@@ -196,6 +204,7 @@ export default function App() {
               <Route path="/ficha-tecnica" element={<FichaTecnica />} />
               <Route path="/design-interpretation" element={<DesignInterpretation />} />
               <Route path="/inverse-design" element={<InverseDesign />} />
+              <Route path="/structural-design" element={<StructuralDesign />} />
             </Routes>
           </Box>
         </Box>

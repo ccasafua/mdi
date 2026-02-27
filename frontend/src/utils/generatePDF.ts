@@ -15,7 +15,7 @@ interface ConfigItem {
   is_candidate: boolean;
 }
 
-const COMPONENT_LABELS: Record<string, { name: string; unit: string }> = {
+export const COMPONENT_LABELS: Record<string, { name: string; unit: string }> = {
   cement: { name: "Cemento", unit: "kg/m\u00B3" },
   blast_furnace_slag: { name: "Escoria de Alto Horno", unit: "kg/m\u00B3" },
   fly_ash: { name: "Ceniza Volante", unit: "kg/m\u00B3" },
@@ -28,7 +28,7 @@ const COMPONENT_LABELS: Record<string, { name: string; unit: string }> = {
 
 // ── Helpers ──
 
-function checkPageBreak(doc: jsPDF, y: number, needed: number): number {
+export function checkPageBreak(doc: jsPDF, y: number, needed: number): number {
   const pageHeight = doc.internal.pageSize.getHeight();
   if (y + needed > pageHeight - 25) {
     doc.addPage();
@@ -37,7 +37,7 @@ function checkPageBreak(doc: jsPDF, y: number, needed: number): number {
   return y;
 }
 
-function addFooters(doc: jsPDF) {
+export function addFooters(doc: jsPDF) {
   const totalPages = doc.getNumberOfPages();
   const pageWidth = doc.internal.pageSize.getWidth();
   for (let i = 1; i <= totalPages; i++) {
@@ -52,7 +52,7 @@ function addFooters(doc: jsPDF) {
   }
 }
 
-function sectionHeader(doc: jsPDF, label: string, y: number): number {
+export function sectionHeader(doc: jsPDF, label: string, y: number): number {
   const pageWidth = doc.internal.pageSize.getWidth();
   y = checkPageBreak(doc, y, 20);
   doc.setFontSize(12);
@@ -69,7 +69,7 @@ function sectionHeader(doc: jsPDF, label: string, y: number): number {
   return y;
 }
 
-function labelValue(doc: jsPDF, label: string, value: string, y: number, labelX = 18, valueX = 90): number {
+export function labelValue(doc: jsPDF, label: string, value: string, y: number, labelX = 18, valueX = 90): number {
   y = checkPageBreak(doc, y, 8);
   doc.setFont("helvetica", "bold");
   doc.text(`${label}:`, labelX, y);
@@ -78,7 +78,7 @@ function labelValue(doc: jsPDF, label: string, value: string, y: number, labelX 
   return y + 6;
 }
 
-function labelValueTag(doc: jsPDF, label: string, value: string, tag: string, y: number): number {
+export function labelValueTag(doc: jsPDF, label: string, value: string, tag: string, y: number): number {
   y = checkPageBreak(doc, y, 8);
   doc.setFont("helvetica", "bold");
   doc.text(`${label}:`, 18, y);

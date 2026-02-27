@@ -39,7 +39,7 @@ export default function InverseDesign() {
     minElasticModulus: 20,
     maxElasticModulus: 45,
     age: 28,
-    maxFlyAshPercent: 35,
+    maxFlyAshPercent: 70,
     maxSettingTimeMinutes: 240,
   });
 
@@ -131,7 +131,7 @@ export default function InverseDesign() {
     <Box>
       <Typography variant="h4" gutterBottom>Diseno Inverso</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Define requisitos estructurales y el sistema explorara el espacio de mezclas para encontrar configuraciones candidatas.
+        Define requisitos estructurales y el sistema maximizara el contenido de ceniza volante manteniendo las restricciones.
       </Typography>
 
       {/* Constraints Input */}
@@ -218,7 +218,7 @@ export default function InverseDesign() {
           </Grid>
           <Grid size={{ xs: 6, sm: 3 }}>
             <TextField
-              fullWidth label="Max fly ash (%)" type="number" size="small"
+              fullWidth label="Max ceniza volante (%)" type="number" size="small"
               value={constraints.maxFlyAshPercent}
               onChange={(e) => updateConstraint("maxFlyAshPercent", e.target.value)}
             />
@@ -268,7 +268,7 @@ export default function InverseDesign() {
             {results.length} Mezcla{results.length > 1 ? "s" : ""} Candidata{results.length > 1 ? "s" : ""}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Ordenadas por margen estructural, sostenibilidad y menor uso de cemento.
+            Ordenadas por mayor % de ceniza volante y menor uso de cemento.
             {modelInfo && ` Modelo: ${modelInfo.algorithm} (R²: ${modelInfo.r2.toFixed(3)})`}
           </Typography>
 
@@ -283,8 +283,9 @@ export default function InverseDesign() {
                     {idx === 0 && <Chip label="Recomendada" color="primary" size="small" sx={{ ml: 1 }} />}
                   </Typography>
                   <Box sx={{ display: "flex", gap: 1 }}>
-                    <Chip label={`Margen: +${candidate.structuralMargin.toFixed(1)} MPa`} color="success" size="small" variant="outlined" />
-                    <Chip label={`Sostenibilidad: ${candidate.sustainabilityScore}`} color="info" size="small" variant="outlined" />
+                    <Chip label={`Ceniza: ${candidate.flyAshContent.toFixed(0)} kg/m³`} color="success" size="small" />
+                    <Chip label={`Sustitucion: ${candidate.flyAshSubstitution.toFixed(1)}%`} color="success" size="small" variant="outlined" />
+                    <Chip label={`Cemento: ${candidate.cementUsage.toFixed(0)} kg/m³`} color="warning" size="small" variant="outlined" />
                   </Box>
                 </Box>
 
@@ -347,8 +348,16 @@ export default function InverseDesign() {
                 </Grid>
                 <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid size={{ xs: 6, sm: 2 }}>
-                    <Typography variant="caption" color="text.secondary">Ind. Rigidez</Typography>
-                    <Typography variant="body1">{p.mechanical.rigidityIndex.toFixed(2)}</Typography>
+                    <Typography variant="caption" color="text.secondary">Ceniza Volante</Typography>
+                    <Typography variant="body1" fontWeight={700} color="success.main">{candidate.flyAshContent.toFixed(0)} kg/m³</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 6, sm: 2 }}>
+                    <Typography variant="caption" color="text.secondary">% Sustitucion</Typography>
+                    <Typography variant="body1" fontWeight={700} color="success.main">{candidate.flyAshSubstitution.toFixed(1)}%</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 6, sm: 2 }}>
+                    <Typography variant="caption" color="text.secondary">Sostenibilidad</Typography>
+                    <Typography variant="body1">{candidate.sustainabilityScore}/100</Typography>
                   </Grid>
                   <Grid size={{ xs: 6, sm: 2 }}>
                     <Typography variant="caption" color="text.secondary">Fraguado est.</Typography>
