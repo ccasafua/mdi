@@ -400,6 +400,8 @@ export default function ModelTraining() {
                   <Chip label={`Flexion: ${(0.62 * Math.sqrt(predictionResult.prediction)).toFixed(2)} MPa`} size="small" variant="outlined" />
                   <Chip label={`E: ${(4700 * Math.sqrt(predictionResult.prediction) / 1000).toFixed(1)} GPa`} size="small" variant="outlined" />
                   <Chip label={`W/C: ${((parseFloat(predictionInput.water) || 0) / (parseFloat(predictionInput.cement) || 1)).toFixed(2)}`} size="small" variant="outlined" />
+                  <Chip label={`W/B: ${((parseFloat(predictionInput.water) || 0) / ((parseFloat(predictionInput.cement) || 0) + (parseFloat(predictionInput.fly_ash) || 0) + (parseFloat(predictionInput.blast_furnace_slag) || 0) || 1)).toFixed(2)}`} size="small" variant="outlined" />
+                  <Chip label={`Rigidez: ${(4700 * Math.sqrt(predictionResult.prediction) / (Object.entries(predictionInput).filter(([k]) => k !== "age").reduce((s, [, v]) => s + (parseFloat(v) || 0), 0) || 1)).toFixed(2)}`} size="small" variant="outlined" />
                 </Stack>
                 <Stack direction="row" spacing={2}>
                   <Button

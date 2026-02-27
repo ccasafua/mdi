@@ -19,11 +19,13 @@ export interface MechanicalProperties {
   flexuralStrength: number;      // ≈ 0.62 × √f'c (MPa) — derived
   elasticModulus: number;        // ≈ 4700 × √f'c (MPa) — derived
   fragilityIndex: number;        // f'c / E (dimensionless) — derived
+  rigidityIndex: number;         // E / density (MPa·m³/kg) — derived
   confidenceInterval: { lower: number; upper: number } | null;
 }
 
 export interface PhysicalProperties {
   waterCementRatio: number;      // W/C
+  waterBinderRatio: number;      // W/B (water / total binder)
   porosity: number;              // % (Powers model simplified)
   density: number;               // kg/m³ estimated
   settingTime: string;           // Estimated setting time description
@@ -132,6 +134,8 @@ export function computeDerivedProperties(input: ComputeInput): DerivedMaterialPr
   const flexuralStrength = 0.62 * Math.sqrt(fc);
   const elasticModulus = 4700 * Math.sqrt(fc);
   const fragilityIndex = elasticModulus > 0 ? fc / elasticModulus : 0;
+  // rigidityIndex computed after density is calculated, placeholder here
+  let rigidityIndex = 0;
 
   const mechanical: MechanicalProperties = {
     compressiveStrength: fc,
@@ -139,6 +143,7 @@ export function computeDerivedProperties(input: ComputeInput): DerivedMaterialPr
     flexuralStrength,
     elasticModulus,
     fragilityIndex,
+    rigidityIndex,
     confidenceInterval:
       input.lowerBound != null && input.upperBound != null
         ? { lower: input.lowerBound, upper: input.upperBound }
@@ -169,8 +174,19 @@ export function computeDerivedProperties(input: ComputeInput): DerivedMaterialPr
 
   const settingTime = estimateSettingTime(comp);
 
+  // Water/Binder ratio (total cementitious material)
+  const flyAshPhys = comp.fly_ash || 0;
+  const slagPhys = comp.blast_furnace_slag || 0;
+  const totalBinderPhys = cement + flyAshPhys + slagPhys;
+  const waterBinderRatio = totalBinderPhys > 0 ? water / totalBinderPhys : 0;
+
+  // Rigidity index: E / density (specific stiffness)
+  rigidityIndex = density > 0 ? elasticModulus / density : 0;
+  mechanical.rigidityIndex = rigidityIndex;
+
   const physical: PhysicalProperties = {
     waterCementRatio: wc,
+    waterBinderRatio,
     porosity: Math.max(0, porosity),
     density,
     settingTime,

@@ -77,6 +77,8 @@ const evalVigas: Evaluator = (p) => {
   if (E >= 25000) { score += 10; advantages.push(`E = ${(E/1000).toFixed(1)} GPa — rigidez adecuada para control de deflexion`); }
   else { score -= 10; risks.push(`E = ${(E/1000).toFixed(1)} GPa bajo — riesgo de deflexion excesiva`); }
 
+  if (p.mechanical.rigidityIndex >= 10) { score += 5; advantages.push(`Indice de rigidez ${p.mechanical.rigidityIndex.toFixed(1)} — eficiencia estructural`); }
+
   if (p.physical.waterCementRatio < 0.50) { score += 5; advantages.push("W/C favorable para durabilidad"); }
   if (p.confidence.r2 != null && p.confidence.r2 < 0.80) { score -= 5; risks.push("Confianza del modelo moderada para decision estructural"); }
 
@@ -107,6 +109,8 @@ const evalColumnas: Evaluator = (p) => {
 
   if (p.physical.porosity < 14) { score += 5; advantages.push("Baja porosidad — durabilidad alta"); }
   else if (p.physical.porosity > 18) { score -= 5; risks.push("Porosidad elevada"); }
+
+  if (p.mechanical.rigidityIndex >= 12) { score += 5; advantages.push(`Indice de rigidez ${p.mechanical.rigidityIndex.toFixed(1)} — buena eficiencia ante pandeo`); }
 
   if (p.physical.density >= 2300) { score += 5; advantages.push("Densidad consistente con hormigon estructural"); }
   if (p.confidence.domainWarnings.length > 0) { score -= 5; risks.push("Advertencias de dominio del modelo"); }
@@ -282,6 +286,7 @@ const evalRevestimientosEstructurales: Evaluator = (p) => {
   else if (p.physical.shrinkageTendency === "Alta") { score -= 10; risks.push("Alta retraccion genera fisuras en capa delgada"); }
 
   if (p.physical.waterCementRatio < 0.50) { score += 5; advantages.push("W/C bajo — durabilidad"); }
+  if (p.physical.waterBinderRatio < 0.45) { score += 5; advantages.push(`W/B ${p.physical.waterBinderRatio.toFixed(2)} — buena compacidad`); }
 
   score = clamp(score, 0, 100);
   return {

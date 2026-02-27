@@ -9,6 +9,10 @@ export interface InverseConstraints {
   maxCompression: number;
   minTensile: number;
   maxTensile: number;
+  minFlexural: number;
+  maxFlexural: number;
+  minElasticModulus: number;    // GPa
+  maxElasticModulus: number;    // GPa
   age: number;
   maxFlyAshPercent: number;     // % of total binder
   maxSettingTimeMinutes: number; // approximate limit
@@ -139,10 +143,14 @@ export async function searchCandidateMixes(
       const { comp, res } = r;
       const fc = res.prediction;
       const tensile = 0.10 * fc;
+      const flexural = 0.62 * Math.sqrt(fc);
+      const elasticModulusGPa = (4700 * Math.sqrt(fc)) / 1000;
 
       // Check constraints
       if (fc < constraints.minCompression || fc > constraints.maxCompression) continue;
       if (tensile < constraints.minTensile || tensile > constraints.maxTensile) continue;
+      if (flexural < constraints.minFlexural || flexural > constraints.maxFlexural) continue;
+      if (elasticModulusGPa < constraints.minElasticModulus || elasticModulusGPa > constraints.maxElasticModulus) continue;
 
       const props = computeDerivedProperties({
         composition: comp,

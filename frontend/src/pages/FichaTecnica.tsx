@@ -1,14 +1,42 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box, Typography, Paper, Grid, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Button, Alert, Chip,
-  Divider, TextField,
+  Divider, TextField, IconButton, Collapse,
 } from "@mui/material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import SaveIcon from "@mui/icons-material/Save";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate } from "react-router-dom";
 import { useMaterialProperties } from "../contexts/MaterialPropertiesContext";
 import { generateAdvancedPDF } from "../utils/generatePDF";
 import { recommendApplications } from "../utils/designInterpretation";
+
+interface ExperimentRecord {
+  id: string;
+  timestamp: string;
+  configLabel: string;
+  predictedCompression: number;
+  predictedFlexion: number;
+  predictedTensile: number;
+  measuredCompression: number | null;
+  measuredFlexion: number | null;
+  measuredTensile: number | null;
+}
+
+const EXPERIMENTS_KEY = "mdi_experiments";
+
+function loadExperiments(): ExperimentRecord[] {
+  try {
+    const raw = localStorage.getItem(EXPERIMENTS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveExperiments(records: ExperimentRecord[]) {
+  localStorage.setItem(EXPERIMENTS_KEY, JSON.stringify(records));
+}
 
 const COMPONENT_LABELS: Record<string, { name: string; unit: string }> = {
   cement: { name: "Cemento", unit: "kg/m\u00B3" },
@@ -41,6 +69,39 @@ export default function FichaTecnica() {
 
   // Experimental validation state
   const [measured, setMeasured] = useState({ compression: "", flexion: "", tensile: "" });
+  const [experiments, setExperiments] = useState<ExperimentRecord[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
+
+  useEffect(() => {
+    setExperiments(loadExperiments());
+  }, []);
+
+  const handleSaveExperiment = () => {
+    if (!properties) return;
+    const record: ExperimentRecord = {
+      id: Date.now().toString(36),
+      timestamp: new Date().toISOString(),
+      configLabel: properties.configLabel,
+      predictedCompression: properties.mechanical.compressiveStrength,
+      predictedFlexion: properties.mechanical.flexuralStrength,
+      predictedTensile: properties.mechanical.tensileStrength,
+      measuredCompression: measured.compression ? parseFloat(measured.compression) : null,
+      measuredFlexion: measured.flexion ? parseFloat(measured.flexion) : null,
+      measuredTensile: measured.tensile ? parseFloat(measured.tensile) : null,
+    };
+    const updated = [record, ...experiments].slice(0, 50);
+    saveExperiments(updated);
+    setExperiments(updated);
+    setSaveMsg("Experimento registrado");
+    setTimeout(() => setSaveMsg(""), 3000);
+  };
+
+  const handleDeleteExperiment = (id: string) => {
+    const updated = experiments.filter((e) => e.id !== id);
+    saveExperiments(updated);
+    setExperiments(updated);
+  };
 
   if (!properties) {
     return (
@@ -163,11 +224,15 @@ export default function FichaTecnica() {
         </TableContainer>
         <Divider sx={{ my: 2 }} />
         <Grid container spacing={2}>
-          <Grid size={{ xs: 6, sm: 3 }}>
+          <Grid size={{ xs: 4, sm: 2 }}>
             <Typography variant="caption" color="text.secondary">Relacion A/C</Typography>
             <Typography variant="body1" fontWeight={600}>{p.physical.waterCementRatio.toFixed(2)}</Typography>
           </Grid>
-          <Grid size={{ xs: 6, sm: 3 }}>
+          <Grid size={{ xs: 4, sm: 2 }}>
+            <Typography variant="caption" color="text.secondary">Relacion A/B</Typography>
+            <Typography variant="body1" fontWeight={600}>{p.physical.waterBinderRatio.toFixed(2)}</Typography>
+          </Grid>
+          <Grid size={{ xs: 4, sm: 2 }}>
             <Typography variant="caption" color="text.secondary">% Sustitucion de cemento</Typography>
             <Typography variant="body1" fontWeight={600}>{substPct.toFixed(1)}%</Typography>
           </Grid>
@@ -214,6 +279,16 @@ export default function FichaTecnica() {
             <Typography variant="h6">{(p.mechanical.elasticModulus / 1000).toFixed(1)} GPa</Typography>
             <Chip label="Derivada: 4700 x sqrt(f'c)" size="small" variant="outlined" sx={{ fontSize: "0.6rem", height: 18 }} />
           </Grid>
+          <Grid size={{ xs: 6, sm: 3 }}>
+            <Typography variant="caption" color="text.secondary">Indice de Fragilidad</Typography>
+            <Typography variant="h6">{(p.mechanical.fragilityIndex * 1000).toFixed(2)} x10{"\u207B\u00B3"}</Typography>
+            <Chip label="f'c / E" size="small" variant="outlined" sx={{ fontSize: "0.6rem", height: 18 }} />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 3 }}>
+            <Typography variant="caption" color="text.secondary">Indice de Rigidez</Typography>
+            <Typography variant="h6">{p.mechanical.rigidityIndex.toFixed(2)}</Typography>
+            <Chip label="E / densidad" size="small" variant="outlined" sx={{ fontSize: "0.6rem", height: 18 }} />
+          </Grid>
         </Grid>
       </Paper>
 
@@ -222,23 +297,27 @@ export default function FichaTecnica() {
         <SectionHeader label="4.4 Propiedades Fisicas" />
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={3}>
-          <Grid size={{ xs: 6, sm: 2.4 }}>
+          <Grid size={{ xs: 6, sm: 2 }}>
             <Typography variant="caption" color="text.secondary">Relacion A/C</Typography>
             <Typography variant="h6">{p.physical.waterCementRatio.toFixed(2)}</Typography>
           </Grid>
-          <Grid size={{ xs: 6, sm: 2.4 }}>
+          <Grid size={{ xs: 6, sm: 2 }}>
+            <Typography variant="caption" color="text.secondary">Relacion A/B</Typography>
+            <Typography variant="h6">{p.physical.waterBinderRatio.toFixed(2)}</Typography>
+          </Grid>
+          <Grid size={{ xs: 6, sm: 2 }}>
             <Typography variant="caption" color="text.secondary">Porosidad estimada</Typography>
             <Typography variant="h6">{p.physical.porosity.toFixed(1)}%</Typography>
           </Grid>
-          <Grid size={{ xs: 6, sm: 2.4 }}>
+          <Grid size={{ xs: 6, sm: 2 }}>
             <Typography variant="caption" color="text.secondary">Densidad estimada</Typography>
             <Typography variant="h6">{p.physical.density.toFixed(0)} kg/m{"\u00B3"}</Typography>
           </Grid>
-          <Grid size={{ xs: 6, sm: 2.4 }}>
+          <Grid size={{ xs: 6, sm: 2 }}>
             <Typography variant="caption" color="text.secondary">Fraguado estimado</Typography>
             <Typography variant="body2">{p.physical.settingTime}</Typography>
           </Grid>
-          <Grid size={{ xs: 6, sm: 2.4 }}>
+          <Grid size={{ xs: 6, sm: 2 }}>
             <Typography variant="caption" color="text.secondary">Tendencia a Retraccion</Typography>
             <Chip
               label={p.physical.shrinkageTendency}
@@ -402,6 +481,64 @@ export default function FichaTecnica() {
               </TableBody>
             </Table>
           </TableContainer>
+        )}
+
+        <Box sx={{ mt: 2, display: "flex", gap: 1, alignItems: "center" }}>
+          <Button
+            variant="contained" size="small" startIcon={<SaveIcon />}
+            onClick={handleSaveExperiment}
+          >
+            Registrar Experimento
+          </Button>
+          {saveMsg && <Alert severity="success" sx={{ py: 0, flex: 1 }}>{saveMsg}</Alert>}
+        </Box>
+
+        {experiments.length > 0 && (
+          <Box sx={{ mt: 2 }}>
+            <Button
+              size="small" onClick={() => setShowHistory(!showHistory)}
+              endIcon={<ExpandMoreIcon sx={{ transform: showHistory ? "rotate(180deg)" : "none", transition: "0.2s" }} />}
+            >
+              Historial de Experimentos ({experiments.length})
+            </Button>
+            <Collapse in={showHistory}>
+              <TableContainer sx={{ mt: 1 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Fecha</TableCell>
+                      <TableCell>Etiqueta</TableCell>
+                      <TableCell align="right">Pred. Comp.</TableCell>
+                      <TableCell align="right">Med. Comp.</TableCell>
+                      <TableCell align="right">Error %</TableCell>
+                      <TableCell align="center" />
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {experiments.map((exp) => {
+                      const errPct = exp.measuredCompression != null && exp.measuredCompression !== 0
+                        ? ((Math.abs(exp.predictedCompression - exp.measuredCompression) / exp.measuredCompression) * 100).toFixed(1)
+                        : "-";
+                      return (
+                        <TableRow key={exp.id}>
+                          <TableCell>{new Date(exp.timestamp).toLocaleDateString("es-ES")}</TableCell>
+                          <TableCell>{exp.configLabel}</TableCell>
+                          <TableCell align="right">{exp.predictedCompression.toFixed(1)}</TableCell>
+                          <TableCell align="right">{exp.measuredCompression?.toFixed(1) ?? "-"}</TableCell>
+                          <TableCell align="right">{errPct}{errPct !== "-" ? "%" : ""}</TableCell>
+                          <TableCell align="center">
+                            <IconButton size="small" onClick={() => handleDeleteExperiment(exp.id)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Collapse>
+          </Box>
         )}
       </Paper>
 

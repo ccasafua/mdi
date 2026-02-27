@@ -34,6 +34,10 @@ export default function InverseDesign() {
     maxCompression: 50,
     minTensile: 2.0,
     maxTensile: 6.0,
+    minFlexural: 2.0,
+    maxFlexural: 8.0,
+    minElasticModulus: 20,
+    maxElasticModulus: 45,
     age: 28,
     maxFlyAshPercent: 35,
     maxSettingTimeMinutes: 240,
@@ -169,6 +173,38 @@ export default function InverseDesign() {
               inputProps={{ step: 0.5 }}
             />
           </Grid>
+          <Grid size={{ xs: 6, sm: 3 }}>
+            <TextField
+              fullWidth label="Flexion min (MPa)" type="number" size="small"
+              value={constraints.minFlexural}
+              onChange={(e) => updateConstraint("minFlexural", e.target.value)}
+              inputProps={{ step: 0.5 }}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 3 }}>
+            <TextField
+              fullWidth label="Flexion max (MPa)" type="number" size="small"
+              value={constraints.maxFlexural}
+              onChange={(e) => updateConstraint("maxFlexural", e.target.value)}
+              inputProps={{ step: 0.5 }}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 3 }}>
+            <TextField
+              fullWidth label="E min (GPa)" type="number" size="small"
+              value={constraints.minElasticModulus}
+              onChange={(e) => updateConstraint("minElasticModulus", e.target.value)}
+              inputProps={{ step: 1 }}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 3 }}>
+            <TextField
+              fullWidth label="E max (GPa)" type="number" size="small"
+              value={constraints.maxElasticModulus}
+              onChange={(e) => updateConstraint("maxElasticModulus", e.target.value)}
+              inputProps={{ step: 1 }}
+            />
+          </Grid>
 
           <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1 }}>Restricciones de mezcla</Typography>
@@ -296,12 +332,27 @@ export default function InverseDesign() {
                     <Chip label="Derivada" size="small" variant="outlined" sx={{ fontSize: "0.6rem", height: 16 }} />
                   </Grid>
                   <Grid size={{ xs: 6, sm: 2 }}>
-                    <Typography variant="caption" color="text.secondary">Fraguado est.</Typography>
-                    <Typography variant="body2">{p.physical.settingTime}</Typography>
+                    <Typography variant="caption" color="text.secondary">Mod. Elasticidad</Typography>
+                    <Typography variant="body1">{(p.mechanical.elasticModulus / 1000).toFixed(1)} GPa</Typography>
+                    <Chip label="Derivada" size="small" variant="outlined" sx={{ fontSize: "0.6rem", height: 16 }} />
                   </Grid>
                   <Grid size={{ xs: 6, sm: 2 }}>
                     <Typography variant="caption" color="text.secondary">W/C</Typography>
                     <Typography variant="body1">{p.physical.waterCementRatio.toFixed(2)}</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 6, sm: 2 }}>
+                    <Typography variant="caption" color="text.secondary">W/B</Typography>
+                    <Typography variant="body1">{p.physical.waterBinderRatio.toFixed(2)}</Typography>
+                  </Grid>
+                </Grid>
+                <Grid container spacing={2} sx={{ mb: 2 }}>
+                  <Grid size={{ xs: 6, sm: 2 }}>
+                    <Typography variant="caption" color="text.secondary">Ind. Rigidez</Typography>
+                    <Typography variant="body1">{p.mechanical.rigidityIndex.toFixed(2)}</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 6, sm: 2 }}>
+                    <Typography variant="caption" color="text.secondary">Fraguado est.</Typography>
+                    <Typography variant="body2">{p.physical.settingTime}</Typography>
                   </Grid>
                   <Grid size={{ xs: 6, sm: 2 }}>
                     <Typography variant="caption" color="text.secondary">IC 95%</Typography>

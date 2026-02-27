@@ -166,6 +166,7 @@ export function generateAdvancedPDF(props: DerivedMaterialProperties) {
   y += 3;
   doc.setFontSize(10);
   y = labelValue(doc, "Relaci\u00F3n A/C", props.physical.waterCementRatio.toFixed(2), y);
+  y = labelValue(doc, "Relaci\u00F3n A/B", props.physical.waterBinderRatio.toFixed(2), y);
   y = labelValue(doc, "% Sustituci\u00F3n cemento", `${substPct.toFixed(1)}%`, y);
   y = labelValue(doc, "Total aglomerantes", `${totalBinder.toFixed(1)} kg/m\u00B3`, y);
   y += 3;
@@ -192,11 +193,14 @@ export function generateAdvancedPDF(props: DerivedMaterialProperties) {
   y = labelValueTag(doc, "Tracci\u00F3n estimada", `${props.mechanical.tensileStrength.toFixed(2)} MPa`, "Derivada: 0.10 x f'c", y);
   y = labelValueTag(doc, "Flexi\u00F3n estimada", `${props.mechanical.flexuralStrength.toFixed(2)} MPa`, "Derivada: 0.62 x sqrt(f'c)", y);
   y = labelValueTag(doc, "M\u00F3dulo de Elasticidad", `${(props.mechanical.elasticModulus / 1000).toFixed(1)} GPa (${props.mechanical.elasticModulus.toFixed(0)} MPa)`, "Derivada: 4700 x sqrt(f'c)", y);
+  y = labelValueTag(doc, "\u00CDndice de Fragilidad", `${(props.mechanical.fragilityIndex * 1000).toFixed(2)} x10\u207B\u00B3`, "f'c / E", y);
+  y = labelValueTag(doc, "\u00CDndice de Rigidez", `${props.mechanical.rigidityIndex.toFixed(2)} MPa\u00B7m\u00B3/kg`, "E / densidad", y);
   y += 3;
 
   // --- 4.4 Propiedades Fisicas ---
   y = sectionHeader(doc, "4.4 Propiedades F\u00EDsicas", y);
   y = labelValue(doc, "Relaci\u00F3n A/C", props.physical.waterCementRatio.toFixed(2), y);
+  y = labelValue(doc, "Relaci\u00F3n A/B", props.physical.waterBinderRatio.toFixed(2), y);
   y = labelValue(doc, "Porosidad estimada", `${props.physical.porosity.toFixed(1)}%`, y);
   y = labelValue(doc, "Densidad estimada", `${props.physical.density.toFixed(0)} kg/m\u00B3`, y);
   y = labelValue(doc, "Fraguado estimado", props.physical.settingTime, y);
