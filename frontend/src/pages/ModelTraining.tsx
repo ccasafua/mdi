@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box, Typography, Button, TextField, MenuItem, Grid,
-  CircularProgress, Paper, Alert, Divider,
+  CircularProgress, Paper, Alert, Divider, Chip, Stack,
 } from "@mui/material";
+import DescriptionIcon from "@mui/icons-material/Description";
+import ArchitectureIcon from "@mui/icons-material/Architecture";
 import {
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
@@ -12,11 +15,24 @@ import MetricsCard from "../components/MetricsCard";
 import ModelConfidence from "../components/ModelConfidence";
 import DesignInsights from "../components/DesignInsights";
 import { useModel } from "../contexts/ModelContext";
+import { useMaterialProperties } from "../contexts/MaterialPropertiesContext";
+import { computeDerivedProperties, type Composition } from "../utils/materialProperties";
 
 const FEATURES = [
   "cement", "blast_furnace_slag", "fly_ash", "water",
   "superplasticizer", "coarse_aggregate", "fine_aggregate", "age",
 ];
+
+const FEATURE_INFO: Record<string, { label: string; unit: string; range: string }> = {
+  cement:              { label: "Cemento",              unit: "kg/m\u00B3", range: "102 – 540" },
+  blast_furnace_slag:  { label: "Escoria de Alto Horno", unit: "kg/m\u00B3", range: "0 – 359" },
+  fly_ash:             { label: "Ceniza Volante",       unit: "kg/m\u00B3", range: "0 – 200" },
+  water:               { label: "Agua",                 unit: "kg/m\u00B3", range: "122 – 247" },
+  superplasticizer:    { label: "Superplastificante",   unit: "kg/m\u00B3", range: "0 – 32" },
+  coarse_aggregate:    { label: "Arido Grueso",         unit: "kg/m\u00B3", range: "801 – 1145" },
+  fine_aggregate:      { label: "Arido Fino",           unit: "kg/m\u00B3", range: "594 – 993" },
+  age:                 { label: "Edad de curado",       unit: "dias",       range: "1 – 365" },
+};
 
 const ALGORITHMS = [
   { value: "random_forest", label: "Random Forest" },
@@ -48,6 +64,8 @@ export default function ModelTraining() {
   const [kernel, setKernel] = useState("rbf");
   const [nNeighbors, setNNeighbors] = useState(5);
   const { models, selectedModel, setSelectedModel, refreshModels } = useModel();
+  const { setProperties } = useMaterialProperties();
+  const navigate = useNavigate();
   const [training, setTraining] = useState(false);
   const [metrics, setMetrics] = useState<{
     r2: number; mae: number; rmse: number;
@@ -102,11 +120,33 @@ export default function ModelTraining() {
     }
     try {
       const res = await predictWithUncertainty(selectedModel, input);
-      setPredictionResult({
-        prediction: res.data.prediction,
-        lower: res.data.uncertainty.lower_bound,
-        upper: res.data.uncertainty.upper_bound,
+      const pred = res.data.prediction;
+      const lower = res.data.uncertainty.lower_bound;
+      const upper = res.data.uncertainty.upper_bound;
+      setPredictionResult({ prediction: pred, lower, upper });
+
+      // Compute derived properties and store in context
+      const composition: Composition = {
+        cement: input.cement,
+        blast_furnace_slag: input.blast_furnace_slag,
+        fly_ash: input.fly_ash,
+        water: input.water,
+        superplasticizer: input.superplasticizer,
+        coarse_aggregate: input.coarse_aggregate,
+        fine_aggregate: input.fine_aggregate,
+        age: input.age,
+      };
+      const derived = computeDerivedProperties({
+        composition,
+        predictedStrength: pred,
+        lowerBound: lower,
+        upperBound: upper,
+        r2: metrics?.r2 ?? null,
+        mae: metrics?.mae ?? null,
+        modelId: selectedModel,
+        configLabel: `Pred-${Date.now().toString(36)}`,
       });
+      setProperties(derived);
     } catch {
       setError("Prediction failed");
     }
@@ -306,21 +346,31 @@ export default function ModelTraining() {
 
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
-              Individual Prediction
+              Prediccion Individual
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Ingresa la composicion de la mezcla en kg/m{"\u00B3"} (excepto edad en dias). Los rangos indicados corresponden al dataset de entrenamiento.
             </Typography>
             <Divider sx={{ mb: 2 }} />
             <Grid container spacing={2}>
-              {FEATURES.map((f) => (
-                <Grid key={f} size={{ xs: 6, sm: 3 }}>
-                  <TextField
-                    fullWidth label={f} type="number" size="small"
-                    value={predictionInput[f]}
-                    onChange={(e) =>
-                      setPredictionInput((prev) => ({ ...prev, [f]: e.target.value }))
-                    }
-                  />
-                </Grid>
-              ))}
+              {FEATURES.map((f) => {
+                const info = FEATURE_INFO[f];
+                return (
+                  <Grid key={f} size={{ xs: 6, sm: 3 }}>
+                    <TextField
+                      fullWidth
+                      label={`${info.label} (${info.unit})`}
+                      type="number" size="small"
+                      placeholder={info.range}
+                      helperText={info.range}
+                      value={predictionInput[f]}
+                      onChange={(e) =>
+                        setPredictionInput((prev) => ({ ...prev, [f]: e.target.value }))
+                      }
+                    />
+                  </Grid>
+                );
+              })}
               <Grid size={{ xs: 12 }}>
                 <Button variant="contained" onClick={handlePredict}>
                   Predict
@@ -341,6 +391,32 @@ export default function ModelTraining() {
                 {saveMsg && <Alert severity="success" sx={{ mt: 1 }}>{saveMsg}</Alert>}
               </Grid>
             </Grid>
+            {predictionResult !== null && (
+              <>
+                <Divider sx={{ my: 2 }} />
+                <Typography variant="subtitle2" gutterBottom>Propiedades Derivadas</Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
+                  <Chip label={`Traccion: ${(0.10 * predictionResult.prediction).toFixed(2)} MPa`} size="small" variant="outlined" />
+                  <Chip label={`Flexion: ${(0.62 * Math.sqrt(predictionResult.prediction)).toFixed(2)} MPa`} size="small" variant="outlined" />
+                  <Chip label={`E: ${(4700 * Math.sqrt(predictionResult.prediction) / 1000).toFixed(1)} GPa`} size="small" variant="outlined" />
+                  <Chip label={`W/C: ${((parseFloat(predictionInput.water) || 0) / (parseFloat(predictionInput.cement) || 1)).toFixed(2)}`} size="small" variant="outlined" />
+                </Stack>
+                <Stack direction="row" spacing={2}>
+                  <Button
+                    variant="outlined" startIcon={<DescriptionIcon />}
+                    onClick={() => navigate("/ficha-tecnica")}
+                  >
+                    Ver Ficha Tecnica
+                  </Button>
+                  <Button
+                    variant="outlined" startIcon={<ArchitectureIcon />}
+                    onClick={() => navigate("/design-interpretation")}
+                  >
+                    Ver Interpretacion
+                  </Button>
+                </Stack>
+              </>
+            )}
             {predictionResult !== null && (
               <DesignInsights
                 prediction={predictionResult.prediction}

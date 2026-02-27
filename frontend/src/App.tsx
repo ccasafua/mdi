@@ -9,16 +9,23 @@ import ModelTrainingIcon from "@mui/icons-material/Psychology";
 import InsightsIcon from "@mui/icons-material/Insights";
 import ScienceIcon from "@mui/icons-material/Science";
 import ListAltIcon from "@mui/icons-material/ListAlt";
+import DescriptionIcon from "@mui/icons-material/Description";
+import ArchitectureIcon from "@mui/icons-material/Architecture";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import DataExplorer from "./pages/DataExplorer";
 import ModelTraining from "./pages/ModelTraining";
 import Explanations from "./pages/Explanations";
 import ExplorationLab from "./pages/ExplorationLab";
 import Configurations from "./pages/Configurations";
+import FichaTecnica from "./pages/FichaTecnica";
+import DesignInterpretation from "./pages/DesignInterpretation";
+import InverseDesign from "./pages/InverseDesign";
 import { ModeProvider, useMode, type Mode } from "./contexts/ModeContext";
 import { ModelProvider } from "./contexts/ModelContext";
 import { DatasetProvider, useDataset } from "./contexts/DatasetContext";
+import { MaterialPropertiesProvider } from "./contexts/MaterialPropertiesContext";
 
-const drawerWidth = 220;
+const drawerWidth = 240;
 
 const theme = createTheme({
   palette: {
@@ -27,12 +34,37 @@ const theme = createTheme({
   },
 });
 
-const navItems = [
-  { label: "Data Explorer", path: "/", icon: <StorageIcon /> },
-  { label: "Model Training", path: "/models", icon: <ModelTrainingIcon /> },
-  { label: "Explanations", path: "/explanations", icon: <InsightsIcon /> },
-  { label: "Exploration Lab", path: "/exploration", icon: <ScienceIcon /> },
-  { label: "Configurations", path: "/configurations", icon: <ListAltIcon /> },
+import type { ReactNode } from "react";
+
+interface NavSection {
+  header: string;
+  items: { label: string; path: string; icon: ReactNode }[];
+}
+
+const navSections: NavSection[] = [
+  {
+    header: "Motor Cementicio",
+    items: [
+      { label: "Explorador de Datos", path: "/", icon: <StorageIcon /> },
+      { label: "Modelado Predictivo", path: "/models", icon: <ModelTrainingIcon /> },
+      { label: "Explicabilidad (SHAP)", path: "/explanations", icon: <InsightsIcon /> },
+      { label: "Lab. de Exploracion", path: "/exploration", icon: <ScienceIcon /> },
+      { label: "Configuraciones", path: "/configurations", icon: <ListAltIcon /> },
+    ],
+  },
+  {
+    header: "Diseno Inverso",
+    items: [
+      { label: "Diseno Inverso", path: "/inverse-design", icon: <SwapHorizIcon /> },
+    ],
+  },
+  {
+    header: "Evaluacion",
+    items: [
+      { label: "Ficha Tecnica", path: "/ficha-tecnica", icon: <DescriptionIcon /> },
+      { label: "Aplicaciones", path: "/design-interpretation", icon: <ArchitectureIcon /> },
+    ],
+  },
 ];
 
 function NavContent() {
@@ -40,20 +72,34 @@ function NavContent() {
   const { datasets, selectedDataset, setSelectedDataset } = useDataset();
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <List>
-        {navItems.map((item) => (
-          <ListItemButton
-            key={item.path}
-            component={Link}
-            to={item.path}
-            selected={location.pathname === item.path}
+      {navSections.map((section, si) => (
+        <Box key={section.header}>
+          {si > 0 && <Divider />}
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            fontWeight={700}
+            sx={{ px: 2, pt: 1.5, pb: 0.5, display: "block", letterSpacing: 0.5, textTransform: "uppercase", fontSize: "0.65rem" }}
           >
-            <ListItemIcon>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.label} />
-          </ListItemButton>
-        ))}
-      </List>
-      <Divider />
+            {section.header}
+          </Typography>
+          <List dense disablePadding>
+            {section.items.map((item) => (
+              <ListItemButton
+                key={item.path}
+                component={Link}
+                to={item.path}
+                selected={location.pathname === item.path}
+                sx={{ py: 0.5 }}
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.label} primaryTypographyProps={{ fontSize: "0.85rem" }} />
+              </ListItemButton>
+            ))}
+          </List>
+        </Box>
+      ))}
+      <Divider sx={{ mt: "auto" }} />
       <Box sx={{ px: 2, py: 1.5 }}>
         <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 1, display: "block" }}>
           Dataset Activo
@@ -109,6 +155,7 @@ export default function App() {
       <ModeProvider>
       <DatasetProvider>
       <ModelProvider>
+      <MaterialPropertiesProvider>
       <BrowserRouter>
         <Box sx={{ display: "flex" }}>
           <AppBar
@@ -146,10 +193,14 @@ export default function App() {
               <Route path="/explanations" element={<Explanations />} />
               <Route path="/exploration" element={<ExplorationLab />} />
               <Route path="/configurations" element={<Configurations />} />
+              <Route path="/ficha-tecnica" element={<FichaTecnica />} />
+              <Route path="/design-interpretation" element={<DesignInterpretation />} />
+              <Route path="/inverse-design" element={<InverseDesign />} />
             </Routes>
           </Box>
         </Box>
       </BrowserRouter>
+      </MaterialPropertiesProvider>
       </ModelProvider>
       </DatasetProvider>
       </ModeProvider>

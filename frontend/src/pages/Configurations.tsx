@@ -1,11 +1,16 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  Box, Typography, Paper, Button, Checkbox, IconButton, Alert,
+  Box, Typography, Paper, Button, Checkbox, IconButton, Alert, Tooltip,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import DescriptionIcon from "@mui/icons-material/Description";
+import ArchitectureIcon from "@mui/icons-material/Architecture";
 import { generateFichaTecnica } from "../utils/generatePDF";
+import { computeDerivedProperties, type Composition } from "../utils/materialProperties";
+import { useMaterialProperties } from "../contexts/MaterialPropertiesContext";
 import {
   listConfigurations, markValidationCandidate,
   deleteConfiguration, exportConfigurations,
@@ -30,6 +35,33 @@ const VALUE_COLS = [
 export default function Configurations() {
   const [configs, setConfigs] = useState<ConfigItem[]>([]);
   const [message, setMessage] = useState("");
+  const { setProperties } = useMaterialProperties();
+  const navigate = useNavigate();
+
+  const navigateWithConfig = (cfg: ConfigItem, target: string) => {
+    const composition: Composition = {
+      cement: cfg.values.cement ?? 0,
+      blast_furnace_slag: cfg.values.blast_furnace_slag ?? 0,
+      fly_ash: cfg.values.fly_ash ?? 0,
+      water: cfg.values.water ?? 0,
+      superplasticizer: cfg.values.superplasticizer ?? 0,
+      coarse_aggregate: cfg.values.coarse_aggregate ?? 0,
+      fine_aggregate: cfg.values.fine_aggregate ?? 0,
+      age: cfg.values.age ?? 0,
+    };
+    const derived = computeDerivedProperties({
+      composition,
+      predictedStrength: cfg.predicted_strength,
+      lowerBound: cfg.lower_bound,
+      upperBound: cfg.upper_bound,
+      r2: null,
+      mae: null,
+      modelId: cfg.model_id,
+      configLabel: cfg.label,
+    });
+    setProperties(derived);
+    navigate(target);
+  };
 
   const load = () => {
     listConfigurations().then((res) => setConfigs(res.data));
@@ -123,13 +155,27 @@ export default function Configurations() {
                       onChange={() => handleToggleCandidate(cfg.id)}
                     />
                   </TableCell>
-                  <TableCell align="center">
-                    <IconButton size="small" onClick={() => generateFichaTecnica(cfg)} title="Descargar ficha técnica PDF">
-                      <PictureAsPdfIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => handleDelete(cfg.id)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
+                  <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
+                    <Tooltip title="Descargar PDF">
+                      <IconButton size="small" onClick={() => generateFichaTecnica(cfg)}>
+                        <PictureAsPdfIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Ver Ficha Tecnica">
+                      <IconButton size="small" onClick={() => navigateWithConfig(cfg, "/ficha-tecnica")}>
+                        <DescriptionIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Interpretar Diseno">
+                      <IconButton size="small" onClick={() => navigateWithConfig(cfg, "/design-interpretation")}>
+                        <ArchitectureIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Eliminar">
+                      <IconButton size="small" onClick={() => handleDelete(cfg.id)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}

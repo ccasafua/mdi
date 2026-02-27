@@ -75,9 +75,10 @@ export function computeSustainability(
 ): { score: number; label: string; color: string } {
   const cement = features.cement ?? 0;
   const flyAsh = features.fly_ash ?? 0;
-  const total = cement + flyAsh;
+  const slag = features.blast_furnace_slag ?? 0;
+  const total = cement + flyAsh + slag;
   if (total === 0) return { score: 0, label: "Sin datos", color: "#9e9e9e" };
-  const score = (flyAsh / total) * 100;
+  const score = ((flyAsh + slag) / total) * 100;
   if (score > 30) return { score, label: "Alta sustentabilidad", color: "#4caf50" };
   if (score >= 15) return { score, label: "Sustentabilidad media", color: "#ff9800" };
   return { score, label: "Baja sustentabilidad", color: "#9e9e9e" };
